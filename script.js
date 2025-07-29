@@ -1,113 +1,128 @@
-window.onload = function() {
-  // 取得暱稱、卡片、蓋章狀態的 localStorage key
-  const STORAGE_KEY = "bingoData";
+const nicknameSection = document.getElementById("nicknameSection");
+const bingoSection = document.getElementById("bingoSection");
+const nicknameInput = document.getElementById("nicknameInput");
+const confirmBtn = document.getElementById("confirmNicknameBtn");
+const resetBtn = document.getElementById("resetBtn");
+const displayNickname = document.getElementById("displayNickname");
+const bingoCard = document.getElementById("bingoCard");
 
-  const nicknameSection = document.getElementById("nicknameSection");
-  const bingoSection = document.getElementById("bingoSection");
-  const nicknameInput = document.getElementById("nicknameInput");
-  const confirmNicknameBtn = document.getElementById("confirmNicknameBtn");
-  const displayNickname = document.getElementById("displayNickname");
-  const bingoCard = document.getElementById("bingoCard");
-  const resetBtn = document.getElementById("resetBtn");
+let card = [];
+let marked = [];
 
-  let bingoData = null;
+function generateBingoCard() {
+  card = [];
+  marked = [];
 
-  function getRandomNumbers(min, max, count) {
-    const nums = [];
-    while (nums.length < count) {
-      const num = Math.floor(Math.random() * (max - min + 1)) + min;
-      if (!nums.includes(num)) nums.push(num);
+  // 範圍分配：1–12, 13–24, 25–37, 38–48
+  const ranges = [
+    [1, 12],
+    [13, 24],
+    [25, 37],
+    [38, 48]
+  ];
+
+  for (let col = 0; col < 4; col++) {
+    let nums = [];
+    while (nums.length < 4) {
+      let n = Math.floor(Math.random() * (ranges[col][1] - ranges[col][0] + 1)) + ranges[col][0];
+      if (!nums.includes(n)) nums.push(n);
     }
-    return nums;
+    card.push(nums);
   }
 
-  function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bingoData));
-  }
-
-  function loadData() {
-    const dataStr = localStorage.getItem(STORAGE_KEY);
-    if (!dataStr) return null;
-    try {
-      return JSON.parse(dataStr);
-    } catch {
-      return null;
-    }
-  }
-
-  function generateCard() {
-    return {
-      B: getRandomNumbers(1, 12, 4),
-      I: getRandomNumbers(13, 24, 4),
-      N: getRandomNumbers(25, 36, 4),
-      G: getRandomNumbers(37, 48, 4),
-    };
-  }
-
-  function renderCard() {
-    bingoCard.innerHTML = "";
-    for (let row = 0; row < 4; row++) {
-      const tr = document.createElement("tr");
-      for (let col = 0; col < 4; col++) {
-        const td = document.createElement("td");
-        if (row === 2 && col === 2) {
-          td.textContent = "FREE";
-          td.className = "free marked";
-        } else {
-          const val = bingoData.card[["B", "I", "N", "G"][col]][row];
-          td.textContent = val;
-        }
-        if (bingoData.marks[row][col]) {
-          td.classList.add("marked");
-        }
-
-        td.addEventListener("click", () => {
-          if (row === 2 && col === 2) return; // FREE格不取消蓋章
-          bingoData.marks[row][col] = !bingoData.marks[row][col];
-          renderCard();
-          saveData();
-        });
-        tr.appendChild(td);
-      }
-      bingoCard.appendChild(tr);
+  // 轉置成 row 優先陣列，並建立 marked 狀態
+  let transposed = [[], [], [], []];
+  for (let i = 0; i < 4; i++) {
+    marked[i] = [];
+    for (let j = 0; j < 4; j++) {
+      transposed[i][j] = card[j][i];
+      marked[i][j] = false;
     }
   }
 
-  function init() {
-    bingoData = loadData();
-    if (bingoData && bingoData.nickname) {
-      nicknameSection.style.display = "none";
-      bingoSection.style.display = "block";
-      displayNickname.textContent = bingoData.nickname;
-      renderCard();
-    } else {
-      nicknameSection.style.display = "block";
-      bingoSection.style.display = "none";
-    }
-  }
+  return transposed;
+}
 
-  confirmNicknameBtn.addEventListener("click", () => {
-    const name = nicknameInput.value.trim();
-    if (!name) {
-      alert("請輸入暱稱");
-      return;
-    }
-    bingoData = {
-      nickname: name,
-      card: generateCard(),
-      marks: Array(4).fill(null).map(() => Array(4).fill(false)),
-    };
-    bingoData.marks[2][2] = true; // FREE格預設蓋章
-    saveData();
-    init();
+function renderCard(data) {
+  bingoCard.innerHTML = "";
+  data.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+    row.forEach((num, colIndex) => {
+      const td = document.createElement("td");
+      td.textContent = num;
+      td.classList.add("cell");
+      if (marked[rowIndex][colIndex]) td.classList.add("marked");
+
+      td.addEventListener("click", () => {
+        marked[rowIndex][colIndex] = !marked[rowIndex][colIndex];
+        td.classList.toggle("marked");
+
+        const lines = countBingoLines(marked);
+        document.getElementById("line-count").textContent = `你目前有 ${lines} 條賓果線`;
+      });
+
+      tr.appendChild(td);
+    });
+    bingoCard.appendChild(tr);
   });
+}
 
-  resetBtn.addEventListener("click", () => {
-    if (confirm("確定要重置暱稱和賓果卡嗎？")) {
-      localStorage.removeItem(STORAGE_KEY);
-      location.reload();
-    }
-  });
+function countBingoLines(marked) {
+  let lines = 0;
 
-  init();
-};
+  // 檢查橫列
+  for (let i = 0; i < 4; i++) {
+    if (marked[i].every(cell => cell)) lines++;
+  }
+
+  // 檢查直行
+  for (let j = 0; j < 4; j++) {
+    if (marked.every(row => row[j])) lines++;
+  }
+
+  // 檢查對角線
+  if ([0,1,2,3].every(i => marked[i][i])) lines++;
+  if ([0,1,2,3].every(i => marked[i][3 - i])) lines++;
+
+  return lines;
+}
+
+// 處理暱稱確認
+confirmBtn.addEventListener("click", () => {
+  const nickname = nicknameInput.value.trim();
+  if (!nickname) return;
+
+  // 存暱稱 & 卡片
+  localStorage.setItem("nickname", nickname);
+  const generatedCard = generateBingoCard();
+  localStorage.setItem("bingoCard", JSON.stringify(generatedCard));
+
+  displayNickname.textContent = nickname;
+  nicknameSection.style.display = "none";
+  bingoSection.style.display = "block";
+  renderCard(generatedCard);
+});
+
+// 重設
+resetBtn.addEventListener("click", () => {
+  localStorage.clear();
+  location.reload();
+});
+
+// 初始載入：如果 localStorage 有資料就自動載入
+window.addEventListener("DOMContentLoaded", () => {
+  const savedNickname = localStorage.getItem("nickname");
+  const savedCard = localStorage.getItem("bingoCard");
+
+  if (savedNickname && savedCard) {
+    displayNickname.textContent = savedNickname;
+    card = JSON.parse(savedCard);
+
+    // 初始化 marked
+    marked = Array(4).fill(null).map(() => Array(4).fill(false));
+
+    nicknameSection.style.display = "none";
+    bingoSection.style.display = "block";
+    renderCard(card);
+  }
+});
