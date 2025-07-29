@@ -13,12 +13,11 @@ function generateBingoCard() {
   card = [];
   marked = [];
 
-  // 範圍分配：1–12, 13–24, 25–37, 38–48
   const ranges = [
-    [1, 12],
-    [13, 24],
-    [25, 37],
-    [38, 48]
+    [1, 10],
+    [11, 20],
+    [21, 30],
+    [31, 40]
   ];
 
   for (let col = 0; col < 4; col++) {
@@ -40,6 +39,9 @@ function generateBingoCard() {
     }
   }
 
+  // 插入 FREE 格（中央）
+  transposed[1][1] = "FREE";
+
   return transposed;
 }
 
@@ -51,15 +53,24 @@ function renderCard(data) {
       const td = document.createElement("td");
       td.textContent = num;
       td.classList.add("cell");
-      if (marked[rowIndex][colIndex]) td.classList.add("marked");
 
-      td.addEventListener("click", () => {
-        marked[rowIndex][colIndex] = !marked[rowIndex][colIndex];
-        td.classList.toggle("marked");
+      // FREE 格處理
+      if (num === "FREE") {
+        marked[rowIndex][colIndex] = true;
+        td.classList.add("marked");
+      } else if (marked[rowIndex][colIndex]) {
+        td.classList.add("marked");
+      }
 
-        const lines = countBingoLines(marked);
-        document.getElementById("line-count").textContent = `你目前有 ${lines} 條賓果線`;
-      });
+      // 點擊邏輯
+      if (num !== "FREE") {
+        td.addEventListener("click", () => {
+          marked[rowIndex][colIndex] = !marked[rowIndex][colIndex];
+          td.classList.toggle("marked");
+          const lines = countBingoLines(marked);
+          document.getElementById("line-count").textContent = `你目前有 ${lines} 條賓果線`;
+        });
+      }
 
       tr.appendChild(td);
     });
@@ -70,17 +81,14 @@ function renderCard(data) {
 function countBingoLines(marked) {
   let lines = 0;
 
-  // 檢查橫列
   for (let i = 0; i < 4; i++) {
     if (marked[i].every(cell => cell)) lines++;
   }
 
-  // 檢查直行
   for (let j = 0; j < 4; j++) {
     if (marked.every(row => row[j])) lines++;
   }
 
-  // 檢查對角線
   if ([0,1,2,3].every(i => marked[i][i])) lines++;
   if ([0,1,2,3].every(i => marked[i][3 - i])) lines++;
 
@@ -92,7 +100,6 @@ confirmBtn.addEventListener("click", () => {
   const nickname = nicknameInput.value.trim();
   if (!nickname) return;
 
-  // 存暱稱 & 卡片
   localStorage.setItem("nickname", nickname);
   const generatedCard = generateBingoCard();
   localStorage.setItem("bingoCard", JSON.stringify(generatedCard));
@@ -109,7 +116,7 @@ resetBtn.addEventListener("click", () => {
   location.reload();
 });
 
-// 初始載入：如果 localStorage 有資料就自動載入
+// 初始載入
 window.addEventListener("DOMContentLoaded", () => {
   const savedNickname = localStorage.getItem("nickname");
   const savedCard = localStorage.getItem("bingoCard");
@@ -118,8 +125,10 @@ window.addEventListener("DOMContentLoaded", () => {
     displayNickname.textContent = savedNickname;
     card = JSON.parse(savedCard);
 
-    // 初始化 marked
     marked = Array(4).fill(null).map(() => Array(4).fill(false));
+
+    // FREE 格自動標記
+    if (card[1][1] === "FREE") marked[1][1] = true;
 
     nicknameSection.style.display = "none";
     bingoSection.style.display = "block";
