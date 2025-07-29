@@ -1,0 +1,45 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+  padding: 20px;
+}
+table {
+  margin: auto;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+td {
+  width: 60px;
+  height: 60px;
+  border: 1px solid #999;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+}
+.free {
+  background-color: #eee;
+  color: #888;
+}
+.marked {
+  background-color: #3a87f2;
+  color: white;
+}
+button {
+  padding: 10px 20px;
+  font-size: 18px;
+  border: none;
+  background-color: #3a87f2;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+input {
+  font-size: 18px;
+  padding: 5px 8px;
+  width: 70%;
+  max-width: 300px;
+  margin-bottom: 10px;
+}
